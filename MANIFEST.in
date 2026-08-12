@@ -1,0 +1,15 @@
+# The sdist must be buildable offline and satisfy MPL source availability:
+# it vendors the full apple-platform-rs tree.
+include Cargo.toml Cargo.lock rust-toolchain.toml
+include LICENSE NOTICE README.md CHANGELOG.md MAINTAINING.md
+include pyproject.toml setup.py Justfile
+recursive-include crates *
+recursive-include include *
+recursive-include tests *
+recursive-include scripts *
+global-exclude .git .gitignore .gitmodules .DS_Store
+global-exclude *.pyc
+prune target
+prune crates/apple-platform-rs/target
+prune .venv
+prune dist

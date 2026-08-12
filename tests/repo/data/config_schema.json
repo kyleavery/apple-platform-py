@@ -1,0 +1,59 @@
+{
+  "CertificateDerSigningKey": [
+    "paths"
+  ],
+  "CertificateSource": [
+    "smartcard",
+    "macos_keychain",
+    "windows_store",
+    "pem",
+    "p12",
+    "remote",
+    "certificate_der"
+  ],
+  "MacosKeychainSigningKey": [
+    "domains",
+    "sha256_fingerprint"
+  ],
+  "P12SigningKey": [
+    "path",
+    "password",
+    "password_path"
+  ],
+  "PemSigningKey": [
+    "files"
+  ],
+  "RemoteSigningKey": [
+    "url",
+    "public_key",
+    "public_key_pem_path",
+    "shared_secret",
+    "shared_secret_env"
+  ],
+  "ScopedSigningSettingsValues": [
+    "binary_identifier",
+    "code_requirements_file",
+    "code_resources_file",
+    "code_signature_flags",
+    "digests",
+    "entitlements_xml_file",
+    "launch_constraints_self_file",
+    "launch_constraints_parent_file",
+    "launch_constraints_responsible_file",
+    "library_constraints_file",
+    "runtime_version",
+    "info_plist_file"
+  ],
+  "SignConfig": [
+    "signer",
+    "path"
+  ],
+  "SmartcardSigningKey": [
+    "slot",
+    "pin"
+  ],
+  "WindowsStoreSigningKey": [
+    "stores",
+    "sha1_fingerprint"
+  ]
+}

@@ -1,0 +1,47 @@
+[package]
+name = "apple-platform-ffi"
+version = "0.1.0"
+description = "C ABI over apple-platform-rs for the apple-platform-py Python package"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "apple_platform"
+# rlib in addition to cdylib so `cargo test` can link the crate's logic.
+crate-type = ["cdylib", "rlib"]
+
+# Path dependencies into the pinned submodule intentionally carry no `version`:
+# the submodule SHA is the single source of truth for what we build against.
+[dependencies]
+apple-codesign = { path = "../apple-platform-rs/apple-codesign", default-features = false }
+app-store-connect = { path = "../apple-platform-rs/app-store-connect", optional = true }
+apple-bundles = { path = "../apple-platform-rs/apple-bundles" }
+apple-dmg = { path = "../apple-platform-rs/apple-dmg" }
+apple-flat-package = { path = "../apple-platform-rs/apple-flat-package" }
+
+# Non-path deps must stay semver-unified with the pinned apple-codesign's own
+# dependency versions (see its Cargo.toml); a divergence surfaces as a loud
+# compile error with two incompatible types, which is the desired failure mode.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+chrono = "0.4"
+x509-certificate = "0.24"
+log = "0.4"
+# Versions matched to the pinned upstream so cargo unifies them.
+base64 = "0.22"
+p12 = "0.6"
+pem = "3.0"
+hex = "0.4"
+anyhow = "1"
+
+[dev-dependencies]
+# Matches the version already in Cargo.lock via upstream's dev-deps.
+tempfile = "3"
+
+[features]
+default = ["notarize"]
+notarize = ["apple-codesign/notarize", "dep:app-store-connect"]
+smartcard = ["apple-codesign/smartcard"]

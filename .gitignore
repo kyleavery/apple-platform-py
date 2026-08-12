@@ -1,0 +1,10 @@
+references/
+/target/
+/.venv/
+__pycache__/
+*.egg-info/
+/dist/
+/build/
+_native_lib.so
+_native_lib.dylib
+_native_lib.dll

@@ -1,0 +1,5 @@
+# Toolchain used for local development and CI builds. Must be >= the pinned
+# upstream's MSRV (1.81 at apple-codesign 0.29.0). Bump freely.
+[toolchain]
+channel = "1.94.0"
+components = ["rustfmt", "clippy"]

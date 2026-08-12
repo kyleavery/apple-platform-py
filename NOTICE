@@ -1,0 +1,24 @@
+apple-platform-py
+Copyright 2026 Kyle Avery
+
+This package's own code (the apple-platform-ffi crate and the apple_platform
+Python package) is licensed under the Apache License, Version 2.0.
+
+The bundled native library statically links code from the apple-platform-rs
+project (https://github.com/indygreg/apple-platform-rs) by Gregory Szorc and
+contributors:
+
+  - apple-codesign, apple-bundles, apple-flat-package, apple-xar,
+    cpio-archive: Mozilla Public License 2.0 (see licenses/MPL-2.0.txt)
+  - apple-dmg, app-store-connect: Apache-2.0 OR MIT
+
+Complete corresponding source for the MPL-licensed components is available:
+
+  - upstream: https://github.com/indygreg/apple-platform-rs
+    (this build's exact commit is reported by apple_platform.versions())
+  - in this package's source distribution (sdist), which vendors the full
+    apple-platform-rs source tree under crates/apple-platform-rs
+
+The wheel also statically links many Rust crates under permissive licenses
+(MIT/Apache-2.0/BSD); their source is available via crates.io and the
+committed Cargo.lock enumerates exact versions.

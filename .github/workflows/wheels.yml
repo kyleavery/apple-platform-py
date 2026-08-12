@@ -1,0 +1,102 @@
+name: Wheels
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  wheels:
+    name: wheel (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14        # arm64
+          - os: ubuntu-24.04    # manylinux x86_64
+          # Native arm runner: emulating the whole build under QEMU is
+          # pathologically slow.
+          - os: ubuntu-24.04-arm
+          # VS 2022 + LLVM + rustup; windows-latest moved to VS 2026.
+          - os: windows-2022    # win_amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Build wheel
+        uses: pypa/cibuildwheel@v2.23
+        env:
+          # The wheel is tagged py3-none-<plat> (ctypes, no CPython ABI), so
+          # build with a single Python per platform.
+          CIBW_BUILD: "cp312-*"
+          CIBW_SKIP: "*-musllinux*"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          # The only native C in the notarize feature set is vendored
+          # (bzip2-sys and lzma-sys, via apple-xar) and needs a C toolchain;
+          # the crypto backend is ring (pure Rust + pregenerated asm).
+          CIBW_BEFORE_ALL_LINUX: >
+            dnf install -y cmake gcc gcc-c++ perl clang-devel &&
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.94.0
+          CIBW_ENVIRONMENT_LINUX: PATH=$HOME/.cargo/bin:$PATH
+          # `auto` archs would also build the 32-bit i686 wheel, which has no
+          # manylinux_2_28 variant and so falls back to manylinux2014_i686 —
+          # CentOS 7, which ships yum, not the dnf that before_all above needs.
+          # 64-bit only (x86_64 on the ubuntu runner, aarch64 on the arm one).
+          CIBW_ARCHS_LINUX: auto64
+          # Windows: `auto` archs would also build win32, whose i686 target
+          # rustup has not installed (and setuptools-rust has no win-arm64
+          # mapping). AMD64 only.
+          CIBW_ARCHS_WINDOWS: AMD64
+          # Static MSVC CRT so the wheel carries no vcruntime140.dll
+          # dependency. Sound here: every buffer is allocated and freed
+          # inside the library (apple_platform_buffer_free), so no CRT-owned
+          # resource crosses the DLL boundary.
+          CIBW_ENVIRONMENT_WINDOWS: RUSTFLAGS="-C target-feature=+crt-static"
+          # The wheel-tier tests run against the installed wheel; the repo
+          # tier (schema snapshot) needs the checkout and runs in ci.yml.
+          CIBW_TEST_REQUIRES: pytest
+          CIBW_TEST_COMMAND: python -m pytest {project}/tests/wheel -q
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist (vendors the full upstream source)
+        run: pipx run build --sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [wheels, sdist]
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write  # PyPI Trusted Publishing
+      contents: write  # GitHub release assets
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Attach artifacts to the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*

@@ -1,0 +1,10 @@
+pub(crate) mod bundle;
+pub(crate) mod certs;
+pub(crate) mod dmg;
+pub(crate) mod macho;
+#[cfg(feature = "notarize")]
+pub(crate) mod notarize;
+pub(crate) mod pkg;
+pub(crate) mod read;
+pub(crate) mod sign;
+pub(crate) mod staple;

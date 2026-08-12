@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        if: runner.os != 'Windows'  # rustfmt output is platform-independent
+        run: cargo fmt --check -p apple-platform-ffi
+      - name: Clippy
+        run: cargo clippy --release -p apple-platform-ffi --no-deps -- -D warnings
+      - name: Build (default features)
+        run: cargo build --release
+      - name: Build (no default features)
+        run: cargo build --release -p apple-platform-ffi --no-default-features
+      - name: Test
+        run: cargo test --release -p apple-platform-ffi
+      - name: Exported symbols survive strip
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            lib=target/release/libapple_platform.dylib
+            count=$(nm -gU "$lib" | grep -c ' _apple_platform_')
+          elif [[ "$RUNNER_OS" == "Windows" ]]; then
+            # No `lib` prefix on Windows, and nm cannot read a PE export
+            # table; llvm-readobj ships with the runner image's LLVM.
+            lib=target/release/apple_platform.dll
+            count=$(llvm-readobj --coff-exports "$lib" | grep -c 'Name: apple_platform_')
+          else
+            lib=target/release/libapple_platform.so
+            count=$(nm -D --defined-only "$lib" | grep -c ' apple_platform_')
+          fi
+          echo "exported apple_platform_* symbols: $count"
+          test "$count" -eq 30
+
+  header-drift:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cbindgen
+        run: cargo install cbindgen --locked
+      - name: Regenerate header and compare
+        run: |
+          cbindgen --config crates/apple-platform-ffi/cbindgen.toml \
+            --crate apple-platform-ffi \
+            --output include/apple_platform.h crates/apple-platform-ffi
+          git diff --exit-code include/apple_platform.h
+
+  python:
+    name: python ${{ matrix.python }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+        python: ["3.9", "3.13"]
+        exclude:
+          # macos-14 runners dropped the 3.9 universal2 installer.
+          - os: macos-14
+            python: "3.9"
+        include:
+          # One Windows canary: Windows adds a platform axis (DLL loading,
+          # path handling, the windows_store cfg arm), not a Python axis.
+          - os: windows-2022
+            python: "3.13"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Install package (builds the cdylib)
+        run: pip install -e .
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run test suite
+        run: python -m pytest tests/ -q

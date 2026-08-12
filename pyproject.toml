@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=77", "setuptools-rust>=1.11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apple-platform-py"
+version = "0.1.0"
+description = "Apple code signing, notarization, and packaging for Python, powered by apple-platform-rs"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Kyle Avery", email = "9327972+kyleavery@users.noreply.github.com" }]
+keywords = ["apple", "macos", "codesign", "notarize", "macho", "dmg", "pkg"]
+# Stdlib-only by design: the SDK talks to the bundled cdylib via ctypes.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/kyleavery/apple-platform-py"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["apple_platform"]
+
+[tool.setuptools.package-data]
+apple_platform = ["py.typed", "*.dylib", "*.so", "*.dll", "licenses/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: tests that talk to real Apple services (need credentials; deselected by default)",
+]
+addopts = "-m 'not live'"

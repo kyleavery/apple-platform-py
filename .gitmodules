@@ -1,0 +1,3 @@
+[submodule "crates/apple-platform-rs"]
+	path = crates/apple-platform-rs
+	url = https://github.com/indygreg/apple-platform-rs
